@@ -158,6 +158,16 @@ millis_t dwin_heat_time = 0;
 
 uint8_t checkkey = 0;
 
+// #if HAS_ONESTEP_LEVELING
+//   #ifdef BLTOUCH
+//    int numLines = 7;
+// #else
+//   int numLines = 6;
+// #endif
+//#else
+//  int numLines = 5;
+//#endif
+
 typedef struct {
   uint8_t now, last;
   void set(uint8_t v) { now = last = v; }
@@ -167,22 +177,25 @@ typedef struct {
   bool inc(uint8_t v) { if (now < (v - 1)) now++; else now = (v - 1); return changed(); }
 } select_t;
 
-select_t select_page{0}, select_file{0}, select_print{0}, select_prepare{0}
-         , select_control{0}
-         , select_axis{0}
-         , select_aux{0}
-         , select_bltm{0}
-         , select_ztool{0}
-         , select_refuel{0}
-         , select_temp{0}
-         , select_motion{0}
-         , select_tune{0}
-         , select_PLA{0}
-         , select_ABS{0}
-         , select_speed{0}
-         , select_acc{0}
-         , select_jerk{0}
-         , select_step{0}
+select_t select_page{0}
+      , select_file{0}
+      , select_print{0}
+      , select_prepare{0}
+      , select_control{0}
+      , select_axis{0}
+      , select_aux{0}
+      , select_ztool{0}
+      , select_refuel{0}
+      , select_temp{0}
+      , select_motion{0}
+      , select_tune{0}
+      , select_PLA{0}
+      , select_ABS{0}
+      , select_speed{0}
+      , select_acc{0}
+      , select_jerk{0}
+      , select_step{0}
+      , select_bltm{0}
          ;
 
 uint8_t index_file     = MROWS,
@@ -193,7 +206,10 @@ uint8_t index_file     = MROWS,
         index_leveling = MROWS,
         index_tune     = MROWS;
 
+
+
 bool dwin_abort_flag = false; // Flag to reset feedrate, return to Home
+
 
 constexpr float default_max_feedrate[]        = DEFAULT_MAX_FEEDRATE;
 constexpr float default_max_acceleration[]    = DEFAULT_MAX_ACCELERATION;
@@ -455,7 +471,7 @@ inline void Draw_Menu_Cursor(const uint8_t line) {
   DWIN_Draw_Rectangle(1, Rectangle_Color, 0, MBASE(line) - 18, 14, MBASE(line + 1) - 20);
 }
 
-inline void Erase_Menu_Cursor(const uint8_t line) {
+inline void Erase_Menu_Cursor(const uint8_t line) { 
   DWIN_Draw_Rectangle(1, Color_Bg_Black, 0, MBASE(line) - 18, 14, MBASE(line + 1) - 20);
 }
 
@@ -536,8 +552,7 @@ inline bool Apply_Encoder(const ENCODER_DiffState &encoder_diffState, auto &valr
 #define PREPARE_CASE_ZOFF (PREPARE_CASE_HOME + ENABLED(HAS_ZOFFSET_ITEM))
 #define PREPARE_CASE_ZTOOL (PREPARE_CASE_ZOFF + ENABLED(HAS_ZOFFSET_ITEM))
 #define PREPARE_CASE_AUX (PREPARE_CASE_ZTOOL + 1)
-#define PREPARE_CASE_BLTM (PREPARE_CASE_AUX + 1)
-#define PREPARE_CASE_REFUEL (PREPARE_CASE_BLTM + 1)
+#define PREPARE_CASE_REFUEL (PREPARE_CASE_AUX + 1)
 #define PREPARE_CASE_PLA  (PREPARE_CASE_REFUEL + ENABLED(HAS_HOTEND))
 #define PREPARE_CASE_ABS  (PREPARE_CASE_PLA + ENABLED(HAS_HOTEND))
 #define PREPARE_CASE_COOL (PREPARE_CASE_ABS + EITHER(HAS_HOTEND, HAS_HEATED_BED))
@@ -549,7 +564,9 @@ inline bool Apply_Encoder(const ENCODER_DiffState &encoder_diffState, auto &valr
 #define CONTROL_CASE_SAVE  (CONTROL_CASE_MOVE + ENABLED(EEPROM_SETTINGS))
 #define CONTROL_CASE_LOAD  (CONTROL_CASE_SAVE + ENABLED(EEPROM_SETTINGS))
 #define CONTROL_CASE_RESET (CONTROL_CASE_LOAD + ENABLED(EEPROM_SETTINGS))
-#define CONTROL_CASE_INFO  (CONTROL_CASE_RESET + 1)
+#define CONTROL_CASE_BLTM (CONTROL_CASE_RESET +1)
+//#define CONTROL_CASE_BLTM (CONTROL_CASE_RESET + ENABLED(HAS_BED_PROBE))
+#define CONTROL_CASE_INFO  (CONTROL_CASE_BLTM + 1)
 #define CONTROL_CASE_TOTAL CONTROL_CASE_INFO
 
 #define TUNE_CASE_SPEED 1
@@ -576,29 +593,23 @@ inline bool Apply_Encoder(const ENCODER_DiffState &encoder_diffState, auto &valr
 // Draw Menus
 //
 
+//inline void Prepare_Item_BltouchMenu(const uint8_t row) {
+////	DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, 64, MBASE(row), (char*)GET_TEXT_F(MSG_BED_LEVELING));
+//     DWIN_Draw_String(false,false,font8x16,Popup_Text_Color,Color_Bg_Window, 64, MBASE(row), (char*)"BLTouch menu");
+//  Draw_Menu_Line(row, ICON_SetHome);
+//	Draw_More_Icon(row);
+//}
+
 inline void draw_move_en(const uint16_t line) {
   DWIN_Frame_AreaCopy(1, 69, 61, 102, 71, LBLX, line); // "Move"
 }
-
-//#ifdef BLTOUCH
-inline void Item_Prepare_BLTM(const uint8_t row) {
-  if (HMI_IsChinese())
-    DWIN_Frame_AreaCopy(1, 159, 70, 271-71, 479-395, LBLX, MBASE(row));
-  else
-     //DWIN_Draw_String(false,false,font8x16,Popup_Text_Color,Color_Bg_Window, 64, MBASE(row), (char*)"BLTouch menu");
-     DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, 64, MBASE(row), (char*)"BLTouch Menu");
-     
-  Draw_Menu_Line(row, ICON_Axis);
-  Draw_More_Icon(row);
-}
-//#endif
 
 inline void Item_Prepare_AUX(const uint8_t row) {
   if (HMI_IsChinese())
     DWIN_Frame_AreaCopy(1, 159, 70, 271-71, 479-395, LBLX, MBASE(row));
   else
     //draw_move_en(MBASE(row)); // "Move >"
-     DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, 64, MBASE(row), (char*)"AUX Leveling");
+     DWIN_Draw_String(false,false,font8x16,Popup_Text_Color,Color_Bg_Window, 64, MBASE(row), (char*)"AUX Leveling");
   Draw_Menu_Line(row, ICON_Axis);
   Draw_More_Icon(row);
 }
@@ -608,7 +619,7 @@ inline void Item_Prepare_ZTool(const uint8_t row) {
     DWIN_Frame_AreaCopy(1, 159, 70, 271-71, 479-395, LBLX, MBASE(row));
   else
     //draw_move_en(MBASE(row)); // "Move >"
-     DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, 64, MBASE(row), (char*)"Z-Offset Tool");
+     DWIN_Draw_String(false,false,font8x16,Popup_Text_Color,Color_Bg_Window, 64, MBASE(row), (char*)"Z-Offset Tool");
   Draw_Menu_Line(row, ICON_Axis);
   Draw_More_Icon(row);
 }
@@ -618,7 +629,7 @@ inline void Item_Prepare_Refuel(const uint8_t row) {
     DWIN_Frame_AreaCopy(1, 159, 70, 271-71, 479-395, LBLX, MBASE(row));
   else
     //draw_move_en(MBASE(row)); // "Move >"
-     DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, 64, MBASE(row), (char*)"Refuel");
+     DWIN_Draw_String(false,false,font8x16,Popup_Text_Color,Color_Bg_Window, 64, MBASE(row), (char*)"Refuel");
   Draw_Menu_Line(row, ICON_Axis);
   Draw_More_Icon(row);
 }
@@ -718,7 +729,6 @@ inline void Item_Prepare_Lang(const uint8_t row) {
   }
   Draw_Menu_Icon(row, ICON_Language);
 }
-
 inline void Draw_Prepare_Menu() {
   Clear_Main_Window();
 
@@ -742,15 +752,11 @@ inline void Draw_Prepare_Menu() {
   if (PVISI(PREPARE_CASE_DISA)) Item_Prepare_Disable(PSCROL(PREPARE_CASE_DISA));  // Disable Stepper
   if (PVISI(PREPARE_CASE_HOME)) Item_Prepare_Home(PSCROL(PREPARE_CASE_HOME));     // Auto Home
   #if HAS_ZOFFSET_ITEM
-  //#if HAS_BED_PROBE
     if (PVISI(PREPARE_CASE_ZOFF)) Item_Prepare_Offset(PSCROL(PREPARE_CASE_ZOFF)); // Edit Z-Offset / Babystep / Set Home Offset
     if (PVISI(PREPARE_CASE_ZTOOL)) Item_Prepare_ZTool(PSCROL(PREPARE_CASE_ZTOOL));         // Z Tool >
   #endif
     if (PVISI(PREPARE_CASE_AUX)) Item_Prepare_AUX(PSCROL(PREPARE_CASE_AUX));         // AUX Leveling >
     if (PVISI(PREPARE_CASE_REFUEL)) Item_Prepare_Refuel(PSCROL(PREPARE_CASE_REFUEL));         // Filament Feed >
-  //#ifdef BLTOUCH
-    if (PVISI(PREPARE_CASE_BLTM)) Item_Prepare_BLTM(PSCROL(PREPARE_CASE_BLTM));         // BLTouch menu >
-  //#endif
   #if HAS_HOTEND
     if (PVISI(PREPARE_CASE_PLA)) Item_Prepare_PLA(PSCROL(PREPARE_CASE_PLA));      // Preheat PLA
     if (PVISI(PREPARE_CASE_ABS)) Item_Prepare_ABS(PSCROL(PREPARE_CASE_ABS));      // Preheat ABS
@@ -761,7 +767,7 @@ inline void Draw_Prepare_Menu() {
   if (PVISI(PREPARE_CASE_LANG)) Item_Prepare_Lang(PSCROL(PREPARE_CASE_LANG));     // Language CN/EN
 
   if (select_prepare.now) Draw_Menu_Cursor(PSCROL(select_prepare.now));
-} 
+}
 
 inline void Draw_Control_Menu() {
   Clear_Main_Window();
@@ -797,11 +803,19 @@ inline void Draw_Control_Menu() {
       Draw_Title(GET_TEXT_F(MSG_CONTROL));
       DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_TEMP), GET_TEXT_F(MSG_TEMPERATURE));
       DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_MOVE), GET_TEXT_F(MSG_MOTION));
+	    DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_BLTM), GET_TEXT_F(MSG_BED_LEVELING));
       #if ENABLED(EEPROM_SETTINGS)
         DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_SAVE), GET_TEXT_F(MSG_STORE_EEPROM));
         DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_LOAD), GET_TEXT_F(MSG_LOAD_EEPROM));
         DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_RESET), GET_TEXT_F(MSG_RESTORE_DEFAULTS));
       #endif
+
+    #ifdef BLTOUCH
+        DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_BLTM), GET_TEXT_F(MSG_BED_LEVELING));
+    //if (CVISI(CONTROL_CASE_BLTM)) DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_BLTM), GET_TEXT_F(MSG_BED_LEVELING));
+    #endif
+    
+
       if (CVISI(CONTROL_CASE_INFO)) DWIN_Draw_String(false, true, font8x16, Color_White, Color_Bg_Black, LBLX, CLINE(CONTROL_CASE_INFO), F("Info"));
     #else
       DWIN_Frame_TitleCopy(1, 128, 2, 176, 12);                                           // "Control"
@@ -821,6 +835,8 @@ inline void Draw_Control_Menu() {
   if (select_control.now && CVISI(select_control.now))
     Draw_Menu_Cursor(CSCROL(select_control.now));
 
+
+
   // Draw icons and lines
   uint8_t i = 0;
   #define _TEMP_ICON(N) do{ ++i; if (CVISI(i)) Draw_Menu_Line(CSCROL(i), ICON_Temperature + (N) - 1); }while(0)
@@ -836,6 +852,9 @@ inline void Draw_Control_Menu() {
     _TEMP_ICON(CONTROL_CASE_LOAD);
     _TEMP_ICON(CONTROL_CASE_RESET);
   #endif
+
+  _TEMP_ICON(CONTROL_CASE_BLTM);
+  Draw_More_Icon(CSCROL(i));
 
   _TEMP_ICON(CONTROL_CASE_INFO);
   if (CVISI(CONTROL_CASE_INFO)) Draw_More_Icon(CSCROL(i));
@@ -1351,11 +1370,44 @@ void HMI_Move_Z() {
   }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #if HAS_ZOFFSET_ITEM
 
   bool printer_busy() { return planner.movesplanned() || printingIsActive(); }
+
 
   void HMI_Zoffset() {
     ENCODER_DiffState encoder_diffState = Encoder_ReceiveAnalyze();
@@ -1388,15 +1440,16 @@ void HMI_Move_Z() {
     }
   }
 
+
+
+
 #endif // HAS_ZOFFSET_ITEM
 
 void HMI_ZoffsetRT() {
   ENCODER_DiffState encoder_diffState = Encoder_ReceiveAnalyze();
   char gcode_string[80];
   if (encoder_diffState != ENCODER_DIFF_NO) {
-    #if HAS_BED_PROBE
     last_zoffset = probe.offset.z;
-    #endif
     if (Apply_Encoder(encoder_diffState, HMI_ValueStruct.offset_value)) {
       EncoderRate.enabled = true;
       dwin_zoffset = HMI_ValueStruct.offset_value / 100;
@@ -1674,6 +1727,10 @@ void update_variable() {
   #if HAS_FAN
     static uint8_t last_fan_speed = 0;
   #endif
+
+
+
+
 
   /* Tune page temperature update */
   if (checkkey == Tune) {
@@ -1982,6 +2039,23 @@ void HMI_StartFrame(const bool with_update) {
   Goto_MainMenu();
   Draw_Status_Area(with_update);
 }
+
+inline void Draw_BlTouch_Menu() {
+  Clear_Main_Window();
+
+    Draw_Title("Bltouch Menu"); // TODO: GET_TEXT_F
+	
+    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(1), (char*)"Alarm Release");
+    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(2), (char*)"Self Test");
+    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(3), (char*)"Pin DOWN");
+    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(4), (char*)"Pin UP");
+
+  Draw_Back_First(select_bltm.now == 0);
+  if (select_bltm.now) Draw_Menu_Cursor(select_bltm.now);
+
+  LOOP_L_N(i, MROWS-1) Draw_Menu_Line(i + 1, ICON_SetEndTemp);
+}
+
 
 inline void Draw_Info_Menu() {
   Clear_Main_Window();
@@ -2397,7 +2471,7 @@ void HMI_AudioFeedback(const bool success=true) {
 
 inline void Draw_ZTool_Menu() {
   Clear_Main_Window();
-  Draw_Title("Z Tool Menu"); // TODO: GET_TEXT_F
+  Draw_Title("Z Tool"); // TODO: GET_TEXT_F
 
 
    #if HAS_BED_PROBE
@@ -2413,9 +2487,10 @@ inline void Draw_ZTool_Menu() {
   LOOP_L_N(i, 2) Draw_Menu_Line(i + 1, ICON_SetHome);
 }
 
+
 inline void Draw_Refuel_Menu() {
   Clear_Main_Window();
-  Draw_Title("Refuel Menu"); // TODO: GET_TEXT_F
+  Draw_Title("Refuel"); // TODO: GET_TEXT_F
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"Length (mm)");
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(2), (char*)"Feed");
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(3), (char*)"Retract");
@@ -2433,27 +2508,36 @@ inline void Draw_AUX_Menu() {
  if (HMI_IsChinese()) {
     DWIN_Frame_AreaCopy(1, 192, 1, 271-38, 479-465, 14, 8);
 
-    DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"To Bottom Left");
+     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"To Bottom Left");
+    
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(2), (char*)"To Top Left");
+
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(3), (char*)"To Top Right");
+    
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(4), (char*)"To Bottom Right");
+
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(5), (char*)"To Center");
   }
   else {
    #ifdef USE_STRING_HEADINGS
-      Draw_Title("Assisted Leveling"); // TODO: GET_TEXT_F
+      Draw_Title("AUX Leveling"); // TODO: GET_TEXT_F
     #else
       DWIN_Frame_AreaCopy(1, 231, 2, 271-6, 479-467, 14, 8);
     #endif
 
+
     //draw_move_en(MBASE(1));         
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"To Bottom Left");
+    
     //draw_move_en(MBASE(2));   
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(2), (char*)"To Top Left");
+
     //draw_move_en(MBASE(3));   
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(3), (char*)"To Top Right");
+  
     //draw_move_en(MBASE(4));   
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(4), (char*)"To Bottom Right");
+
     //draw_move_en(MBASE(5));   
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(5), (char*)"To Center");
 
@@ -2462,39 +2546,6 @@ inline void Draw_AUX_Menu() {
   if (select_aux.now) Draw_Menu_Cursor(select_aux.now);
   LOOP_L_N(i, 5) Draw_Menu_Line(i + 1, ICON_Homing);
 }
-
-
-inline void Draw_BlTouch_Menu() {
-  Clear_Main_Window();
-//#ifdef BLTOUCH
-if (HMI_IsChinese()) {
-    DWIN_Frame_AreaCopy(1, 192, 1, 271-38, 479-465, 14, 8);
-
-    DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"Alarm Release");
-    DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(2), (char*)"Self Test");
-    DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(3), (char*)"To Top Right");
-    DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(4), (char*)"Pin DOWN");
-  }
-  else {
-   #ifdef USE_STRING_HEADINGS
-    Draw_Title("BLTouch Menu"); // TODO: GET_TEXT_F
-	 #else
-      DWIN_Frame_AreaCopy(1, 231, 2, 271-6, 479-467, 14, 8);
-    #endif
-
-    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(1), (char*)"Alarm Release");
-    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(2), (char*)"Self Test");
-    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(3), (char*)"Pin DOWN");
-    DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(4), (char*)"Pin UP");
-  }
-  //#else 
-  //DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Black, LBLX, MBASE(4), (char*)"BLTouch is not configured");
-  //#endif
-  Draw_Back_First(select_bltm.now == 0);
-  if (select_bltm.now) Draw_Menu_Cursor(select_bltm.now);
-  LOOP_L_N(i, 4) Draw_Menu_Line(i + 1, ICON_SetEndTemp);
-}
-
 
 /* Prepare */
 void HMI_Prepare() {
@@ -2515,9 +2566,6 @@ void HMI_Prepare() {
        if (index_prepare < 7) Draw_More_Icon(MROWS - index_prepare + 1);
           if (index_prepare == PREPARE_CASE_AUX) Item_Prepare_AUX(MROWS);
           if (index_prepare == PREPARE_CASE_REFUEL) Item_Prepare_Refuel(MROWS);
-        //#ifdef BLTOUCH
-          if (index_prepare == PREPARE_CASE_BLTM) Item_Prepare_BLTM(MROWS);
-        //#endif
         #if HAS_HOTEND
           if (index_prepare == PREPARE_CASE_PLA) Item_Prepare_PLA(MROWS);
           if (index_prepare == PREPARE_CASE_ABS) Item_Prepare_ABS(MROWS);
@@ -2551,7 +2599,6 @@ void HMI_Prepare() {
         else if (index_prepare == 9) Item_Prepare_Offset(0);
         else if (index_prepare == 10) Item_Prepare_ZTool(0);
         else if (index_prepare == 11) Item_Prepare_Refuel(0);
-        //else if (index_prepare == 12) Item_Prepare_BLTM(0);
       }
       else {
         Move_Highlight(-1, select_prepare.now + MROWS - index_prepare);
@@ -2637,14 +2684,6 @@ void HMI_Prepare() {
         Draw_AUX_Menu();
         DWIN_UpdateLCD();
         break;
-       //#ifdef BLTOUCH
-       case PREPARE_CASE_BLTM:  // BLtouch menu
-        checkkey = bltm;
-        select_bltm.reset();
-        Draw_BlTouch_Menu();
-        DWIN_UpdateLCD();
-        break;
-       //#endif
       case PREPARE_CASE_REFUEL: // Filament Feed
         checkkey = Refuel;
         select_refuel.reset();
@@ -2782,7 +2821,11 @@ void HMI_Control() {
         Draw_Menu_Icon(MROWS, ICON_Temperature + index_control - 1);
         Draw_More_Icon(CONTROL_CASE_TEMP + MROWS - index_control); // Temperature >
         Draw_More_Icon(CONTROL_CASE_MOVE + MROWS - index_control); // Motion >
+        //#ifdef BLTOUCH
+        
+        //#endif
         if (index_control > MROWS) {
+          Draw_More_Icon(CONTROL_CASE_BLTM + MROWS - index_control); // Bltouch menu >
           Draw_More_Icon(CONTROL_CASE_INFO + MROWS - index_control); // Info >
           if (HMI_IsChinese())
             DWIN_Frame_AreaCopy(1, 231, 104, 258, 116, LBLX, MBASE(CONTROL_CASE_INFO - 1));
@@ -2843,6 +2886,14 @@ void HMI_Control() {
           HMI_AudioFeedback();
           break;
       #endif
+	  //#ifdef BLTOUCH
+	    case CONTROL_CASE_BLTM: { // BLtouch menu
+          checkkey = BltouchM;
+          select_bltm.reset();
+          Draw_BlTouch_Menu();
+          //DWIN_UpdateLCD();
+         } break;
+    //      #endif
       case CONTROL_CASE_INFO: // Info
         checkkey = Info;
         Draw_Info_Menu();
@@ -2861,8 +2912,13 @@ void HMI_Control() {
     Popup_Window_Leveling();
     DWIN_UpdateLCD();
     gcode.process_subcommands_now_P( PSTR("M220 S100"));
-    queue.inject_P(PSTR("G28O\nG29"));
+    queue.inject_P(PSTR("G28\nG29"));
   }
+
+
+
+
+
 
 #endif
 
@@ -2942,6 +2998,13 @@ void HMI_AxisMove() {
   }
   DWIN_UpdateLCD();
 }
+
+
+
+
+
+
+
 
 /* TemperatureID */
 void HMI_Temperature() {
@@ -3460,50 +3523,6 @@ void HMI_AUX() {
   DWIN_UpdateLCD();
 }
 
-void HMI_BlTouch_Menu() {
-  ENCODER_DiffState encoder_diffState = get_encoder_state();
-  if (encoder_diffState == ENCODER_DIFF_NO) return;
-
-  // Avoid flicker by updating only the previous menu
-  if (encoder_diffState == ENCODER_DIFF_CW) {
-    if (select_bltm.inc(5)) Move_Highlight(1, select_bltm.now);
-  }
-  else if (encoder_diffState == ENCODER_DIFF_CCW) {
-    if (select_bltm.dec()) Move_Highlight(-1, select_bltm.now);
-  }
-  else if (encoder_diffState == ENCODER_DIFF_ENTER) {
-    switch (select_bltm.now) {
-      case 0: // back
-        checkkey = Prepare;
-        select_prepare.set(1);
-        index_prepare = MROWS;
-        Draw_Prepare_Menu();
-			break;
-        break;
-      case 1: // bltouch alarm release
-      index_aux = MROWS;
-		  queue.inject_P(PSTR("M280 P0 S160"));
-        break;
-      case 2: // bltouch self test
-      index_aux = MROWS;
-		  queue.inject_P(PSTR("M280 P0 S120\nG4 P1000\nM280 P0 S160"));
-        break;
-      case 3: // pin down
-      index_aux = MROWS;
-		  queue.inject_P(PSTR("M280 P0 S10"));
-		break;
-	    case 4: // pin up
-      index_aux = MROWS;
-		  queue.inject_P(PSTR("M280 P0 S90"));
-        break;
-      default:
-        break;
-    }
-  }
-  DWIN_UpdateLCD();
-}
-
-
 void HMI_Refuel(void){
     ENCODER_DiffState encoder_diffState = get_encoder_state();
   if (encoder_diffState == ENCODER_DIFF_NO) return;
@@ -3689,6 +3708,44 @@ void HMI_Info() {
       select_page.set(3);
       Goto_MainMenu();
     #endif
+  }
+  DWIN_UpdateLCD();
+}
+
+//bltouch menu
+void HMI_BlTouch_Menu() {
+  ENCODER_DiffState encoder_diffState = get_encoder_state();
+  if (encoder_diffState == ENCODER_DIFF_NO) return;
+
+  // Avoid flicker by updating only the previous menu
+  if (encoder_diffState == ENCODER_DIFF_CW) {
+    if (select_bltm.inc(4)) Move_Highlight(1, select_bltm.now);
+  }
+  else if (encoder_diffState == ENCODER_DIFF_CCW) {
+    if (select_bltm.dec()) Move_Highlight(-1, select_bltm.now);
+  }
+  else if (encoder_diffState == ENCODER_DIFF_ENTER) {
+    switch (select_bltm.now) {
+      case 0: // back
+			checkkey = Control;
+			select_control.set(6);
+			Draw_Control_Menu();
+			break;
+        break;
+      case 1: // bltouch alarm release
+		  queue.inject_P(PSTR("M280 P0 S160"));
+        break;
+      case 2: // bltouch self test
+		  queue.inject_P(PSTR("M280 P0 S120\nG4 P1000\nM280 P0 S160"));
+        break;
+      case 3: // pin down
+		  queue.inject_P(PSTR("M280 P0 S10"));
+		break;
+	  case 4: // pin up
+		  queue.inject_P(PSTR("M280 P0 S90"));
+		break;
+     
+    }
   }
   DWIN_UpdateLCD();
 }
@@ -4145,6 +4202,7 @@ void EachMomentUpdate() {
       DWIN_Draw_String(false, true, font8x16, Popup_Text_Color, Color_Bg_Window, npos, 252, name);
       DWIN_UpdateLCD();
 
+
       while (recovery_flag) {
         ENCODER_DiffState encoder_diffState = Encoder_ReceiveAnalyze();
         if (encoder_diffState != ENCODER_DIFF_NO) {
@@ -4180,7 +4238,6 @@ void DWIN_HandleScreen() {
     case SelectFile:      HMI_SelectFile(); break;
     case Prepare:         HMI_Prepare(); break;
     case AUX:             HMI_AUX(); break;
-    case bltm:            HMI_BlTouch_Menu(); break;
     case ZTool:           HMI_ZTool(); break;
     case Refuel:          HMI_Refuel(); break;
     case Control:         HMI_Control(); break;
@@ -4188,6 +4245,7 @@ void DWIN_HandleScreen() {
     case PrintProcess:    HMI_Printing(); break;
     case Print_window:    HMI_PauseOrStop(); break;
     case AxisMove:        HMI_AxisMove(); break;
+	  case BltouchM:        HMI_BlTouch_Menu(); break;
     case TemperatureID:   HMI_Temperature(); break;
     case Motion:          HMI_Motion(); break;
     case Info:            HMI_Info(); break;
